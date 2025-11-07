@@ -1,23 +1,6 @@
-<?php
-// great_circle_map.php
-// PHP側は都市リストを準備してJSONで渡すだけ
-
-$cities = [
-  "Tokyo" => ["lat" => 35.682839, "lon" => 139.759455],
-  "Sendai" => ["lat" => 38.268215, "lon" => 140.869356],
-  "New York" => ["lat" => 40.712776, "lon" => -74.005974],
-  "London" => ["lat" => 51.507351, "lon" => -0.127758],
-  "Sydney" => ["lat" => -33.868820, "lon" => 151.209296],
-  "San Francisco" => ["lat" => 37.774929, "lon" => -122.419418],
-
-  // 追加分
-  "8J1RL (南極昭和基地)" => ["lat" => -69.0096, "lon" => 39.5820],
-  "JD1 (小笠原父島)"      => ["lat" => 27.0943, "lon" => 142.1853],
-  "8J3EXPO (大阪市夢洲)"  => ["lat" => 34.6489, "lon" => 135.4074],
-];
-
-$cities_json = json_encode($cities);
-?>
+<!-- great_circle_map.php
+     都市リストは外部 cities.json から fetch で取得する構造に変更。
+     PHPによる埋め込みは廃止。 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -51,33 +34,40 @@ $cities_json = json_encode($cities);
 </div>
 <svg id="map"></svg>
 <script>
-// PHPから受け取った都市データ
-const cities = <?php echo $cities_json; ?>;
+// 都市リストは外部 cities.json から fetch で取得
+// 設計意図: PHP埋め込みを廃止し、都市データの管理・追加を cities.json で一元化
 const width = window.innerWidth;
 const height = window.innerHeight;
 
 const svg = d3.select("#map");
 const g = svg.append("g");
-
-// セレクトボックスに都市を追加
 const select = document.getElementById("citySelect");
-Object.keys(cities).forEach(name => {
-  const opt = document.createElement("option");
-  opt.value = name;
-  opt.textContent = name;
-  select.appendChild(opt);
-});
-// デフォルトは東京
-select.value = "Tokyo";
 
-// 世界地図データを読み込む
-d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
-  const countries = topojson.feature(world, world.objects.countries);
+// 都市リストを cities.json から取得
+fetch("cities.json")
+  .then(response => {
+    if (!response.ok) throw new Error("都市リスト (cities.json) の取得に失敗しました");
+    return response.json();
+  })
+  .then(cities => {
+    // セレクトボックスに都市を追加
+    Object.keys(cities).forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+    // デフォルトは東京
+    select.value = "Tokyo";
 
-  function drawMap(centerCity) {
-    g.selectAll("*").remove(); // 前の描画をクリア
+    // 世界地図データを読み込む
+    d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(world => {
+      const countries = topojson.feature(world, world.objects.countries);
 
-    const center = cities[centerCity];
+      function drawMap(centerCity) {
+        g.selectAll("*").remove(); // 前の描画をクリア
+
+        const center = cities[centerCity];
 
     // 投影法: 正距方位図法
     const projection = d3.geoAzimuthalEquidistant()
@@ -137,49 +127,56 @@ d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json").then(w
       }
     }
 
-    // 各都市マーカー
-    Object.entries(cities).forEach(([name, coord]) => {
-      const [cx, cy] = projection([coord.lon, coord.lat]);
-      g.append("circle")
-       .attr("cx", cx)
-       .attr("cy", cy)
-       .attr("r", name === centerCity ? 6 : 4)
-       .attr("fill", name === centerCity ? "red" : "blue");
+        // ...existing code...
+        // 各都市マーカー
+        Object.entries(cities).forEach(([name, coord]) => {
+          const [cx, cy] = projection([coord.lon, coord.lat]);
+          g.append("circle")
+           .attr("cx", cx)
+           .attr("cy", cy)
+           .attr("r", name === centerCity ? 6 : 4)
+           .attr("fill", name === centerCity ? "red" : "blue");
 
-      g.append("text")
-       .attr("x", cx + 8)
-       .attr("y", cy + 4)
-       .text(name)
-       .attr("font-size","12px")
-       .attr("fill","#333");
-    });
-  }
+          g.append("text")
+           .attr("x", cx + 8)
+           .attr("y", cy + 4)
+           .text(name)
+           .attr("font-size","12px")
+           .attr("fill","#333");
+        });
+      }
 
-  // 初期描画（東京）
-  drawMap("Tokyo");
+      // 初期描画（東京）
+      drawMap("Tokyo");
 
-  // セレクト変更時に再描画
-  select.addEventListener("change", e => {
-    drawMap(e.target.value);
-  });
-
-  // ズーム機能
-  const zoom = d3.zoom()
-      .scaleExtent([0.1, 20]) // ズーム範囲を広げる
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform);
+      // セレクト変更時に再描画
+      select.addEventListener("change", e => {
+        drawMap(e.target.value);
       });
 
-  svg.call(zoom);
+      // ズーム機能
+      const zoom = d3.zoom()
+          .scaleExtent([0.1, 20]) // ズーム範囲を広げる
+          .on("zoom", (event) => {
+            g.attr("transform", event.transform);
+          });
 
-  // ボタン操作
-  d3.select("#zoom_in").on("click", () => {
-    svg.transition().call(zoom.scaleBy, 1.2);
+      svg.call(zoom);
+
+      // ボタン操作
+      d3.select("#zoom_in").on("click", () => {
+        svg.transition().call(zoom.scaleBy, 1.2);
+      });
+      d3.select("#zoom_out").on("click", () => {
+        svg.transition().call(zoom.scaleBy, 0.8);
+      });
+    });
+  })
+  .catch(error => {
+    // fetch失敗時はエラーメッセージを表示
+    document.body.innerHTML = `<div style='color:red;padding:2em;'>${error.message}</div>`;
+    console.error(error);
   });
-  d3.select("#zoom_out").on("click", () => {
-    svg.transition().call(zoom.scaleBy, 0.8);
-  });
-});
 </script>
 </body>
 </html>

@@ -26,29 +26,31 @@ php -S localhost:8000
 
 ## 使い方
 1. リポジトリを clone または download します。
-2. `index.php` を PHP サーバーで実行します。
+2. `great_circle_map.php` を PHP サーバーで実行します。
 3. ブラウザでアクセスすると、地図が表示されます。
 4. プルダウンで中心都市を切り替え、ズームや距離円を確認できます。
 
 ## 都市の追加方法
-都市リストは `index.php` 内の `$cities` 配列で管理しています。  
-新しい都市を追加する場合は以下のように座標を追記してください。
+都市リストは `cities.json` で管理しています。
+新しい都市を追加する場合は `cities.json` に座標を追記してください。
 
-```php
-$cities = [
-  "Tokyo" => ["lat" => 35.682839, "lon" => 139.759455],
+```json
+{
+  "Tokyo": {"lat": 35.682839, "lon": 139.759455},
   // 追加例
-  "MyCity" => ["lat" => 緯度, "lon" => 経度],
-];
+  "MyCity": {"lat": 緯度, "lon": 経度}
+}
 ```
 
 追加した都市は自動的にプルダウンに反映されます。
 
 ## プロジェクト構成例
 ```
-great-circle-map/
-├─ index.php          ← メインの地図描画コード
-├─ README.md          ← この説明ファイル
+great_circle_map/
+├─ great_circle_map.php   ← メインの地図描画コード
+├─ cities.json            ← 都市リスト（外部JSON）
+├─ LICENSE                ← ライセンス
+├─ README.md              ← この説明ファイル
 ```
 
 ## ライセンス
